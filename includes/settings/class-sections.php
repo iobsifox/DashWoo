@@ -1,0 +1,1377 @@
+<?php
+/**
+ * The 30 Settings Center sections + their field schemas.
+ *
+ * The schema is the single source of truth for: the admin UI, sanitisation,
+ * defaults, the REST schema and the regression snapshots.
+ *
+ * @package DashWoo
+ */
+
+namespace DashWoo\Settings;
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * Section + field definitions.
+ */
+final class Sections {
+
+	/**
+	 * Navigation groups (order matters).
+	 *
+	 * @return array<string,array<string,mixed>>
+	 */
+	public static function groups() {
+		return array(
+			'core'       => array(
+				'label' => 'هسته',
+				'icon'  => 'settings',
+			),
+			'fonts'      => array(
+				'label' => 'فونت و آیکون',
+				'icon'  => 'text_fields',
+			),
+			'design'     => array(
+				'label' => 'دیزاین سیستم',
+				'icon'  => 'palette',
+			),
+			'components' => array(
+				'label' => 'کامپوننت‌ها',
+				'icon'  => 'widgets',
+			),
+			'delivery'   => array(
+				'label' => 'تحویل و عملکرد',
+				'icon'  => 'rocket_launch',
+			),
+		);
+	}
+
+	/**
+	 * All sections: key => definition.
+	 *
+	 * @return array<string,array<string,mixed>>
+	 */
+	public static function all() {
+		$sections = array();
+
+		// ---------------------------------------------------------- Core (5).
+		$sections['dashboard'] = array(
+			'label'       => 'داشبورد',
+			'group'       => 'core',
+			'capability'  => 'manage_options',
+			'description' => 'نمای کلی وضعیت سیستم، دارایی‌ها و اعلان‌ها.',
+			'fields'      => array(
+				array(
+					'key'     => 'widgets',
+					'label'   => 'نمایش ابزارک‌های فعال',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'notice',
+					'label'   => 'متن اعلان داشبورد',
+					'type'    => 'text',
+					'default' => '',
+				),
+			),
+		);
+
+		$sections['general'] = array(
+			'label'       => 'عمومی',
+			'group'       => 'core',
+			'capability'  => 'manage_options',
+			'description' => 'فعال‌سازی کلی، حالت رندر، زبان و کش.',
+			'fields'      => array(
+				array(
+					'key'     => 'enabled',
+					'label'   => 'فعال‌سازی DashWoo',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'mode',
+					'label'   => 'حالت رندر',
+					'type'    => 'select',
+					'default' => 'full',
+					'options' => array(
+						'full'          => 'Full Override — کنترل کامل قالب‌ها',
+						'compatibility' => 'Compatible — همزیستی با قالب/افزونه‌ها',
+					),
+				),
+				array(
+					'key'     => 'elementor_enabled',
+					'label'   => 'یکپارچه‌سازی با المنتور',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'language',
+					'label'   => 'زبان پلتفرم',
+					'type'    => 'select',
+					'default' => 'fa_IR',
+					'options' => array(
+						'fa_IR' => 'فارسی',
+						'en_US' => 'English',
+					),
+				),
+				array(
+					'key'     => 'rtl',
+					'label'   => 'پشتیبانی RTL',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'cache_ttl',
+					'label'   => 'مدت کش (ثانیه)',
+					'type'    => 'number',
+					'default' => 3600,
+					'min'     => 60,
+					'max'     => 86400,
+					'step'    => 60,
+				),
+				array(
+					'key'     => 'log_level',
+					'label'   => 'سطح لاگ',
+					'type'    => 'select',
+					'default' => 'warning',
+					'options' => array(
+						'debug'   => 'Debug',
+						'info'    => 'Info',
+						'warning' => 'Warning',
+						'error'   => 'Error',
+					),
+				),
+				array(
+					'key'     => 'remove_data_on_uninstall',
+					'label'   => 'حذف داده‌ها هنگام حذف افزونه',
+					'type'    => 'toggle',
+					'default' => false,
+				),
+			),
+		);
+
+		$sections['compatibility'] = array(
+			'label'       => 'سازگاری نسخه‌ها',
+			'group'       => 'core',
+			'capability'  => 'manage_options',
+			'description' => 'نتیجه بررسی محیط و آستانه‌های نسخه.',
+			'fields'      => array(
+				array(
+					'key'     => 'min_php',
+					'label'   => 'حداقل PHP',
+					'type'    => 'text',
+					'default' => '8.0',
+				),
+				array(
+					'key'     => 'min_wp',
+					'label'   => 'حداقل وردپرس',
+					'type'    => 'text',
+					'default' => '6.4',
+				),
+				array(
+					'key'     => 'min_wc',
+					'label'   => 'حداقل ووکامرس',
+					'type'    => 'text',
+					'default' => '8.5',
+				),
+				array(
+					'key'     => 'min_elementor',
+					'label'   => 'حداقل المنتور',
+					'type'    => 'text',
+					'default' => '3.24',
+				),
+				array(
+					'key'     => 'auto_fallback',
+					'label'   => 'سوئیچ خودکار به Compatibility Mode',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'recheck_interval',
+					'label'   => 'فاصله بررسی مجدد (ساعت)',
+					'type'    => 'number',
+					'default' => 12,
+					'min'     => 1,
+					'max'     => 168,
+					'step'    => 1,
+				),
+			),
+		);
+
+		$sections['updates'] = array(
+			'label'       => 'به‌روزرسانی‌ها',
+			'group'       => 'core',
+			'capability'  => 'manage_options',
+			'description' => 'کانال به‌روزرسانی و مدیریت متادیتای دارایی‌ها.',
+			'fields'      => array(
+				array(
+					'key'     => 'channel',
+					'label'   => 'کانال',
+					'type'    => 'select',
+					'default' => 'stable',
+					'options' => array(
+						'stable' => 'Stable',
+						'beta'   => 'Beta',
+					),
+				),
+				array(
+					'key'     => 'auto_update_assets',
+					'label'   => 'به‌روزرسانی خودکار دارایی‌ها',
+					'type'    => 'toggle',
+					'default' => false,
+				),
+				array(
+					'key'     => 'check_interval',
+					'label'   => 'فاصله بررسی (ساعت)',
+					'type'    => 'number',
+					'default' => 24,
+					'min'     => 1,
+					'max'     => 720,
+					'step'    => 1,
+				),
+			),
+		);
+
+		$sections['logs'] = array(
+			'label'       => 'گزارش‌ها',
+			'group'       => 'core',
+			'capability'  => 'manage_options',
+			'description' => 'آخرین رویدادهای سیستم (حداکثر ۲۰۰ ردیف).',
+			'fields'      => array(
+				array(
+					'key'     => 'enabled',
+					'label'   => 'ثبت رویداد',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'max_rows',
+					'label'   => 'حداکثر ردیف',
+					'type'    => 'number',
+					'default' => 200,
+					'min'     => 20,
+					'max'     => 2000,
+					'step'    => 20,
+				),
+			),
+		);
+
+		// --------------------------------------------- Fonts & Icons (6).
+		$sections['typography'] = array(
+			'label'       => 'تایپوگرافی',
+			'group'       => 'fonts',
+			'description' => 'فونت‌های پایه و مقیاس ریسپانسیو با پشتیبانی کامل فارسی.',
+			'fields'      => array(
+				array(
+					'key'     => 'primary_font',
+					'label'   => 'فونت اصلی',
+					'type'    => 'font',
+					'default' => 'Vazirmatn',
+				),
+				array(
+					'key'     => 'heading_font',
+					'label'   => 'فونت تیترها',
+					'type'    => 'font',
+					'default' => 'Vazirmatn',
+				),
+				array(
+					'key'     => 'body_font',
+					'label'   => 'فونت متن',
+					'type'    => 'font',
+					'default' => 'Vazirmatn',
+				),
+				array(
+					'key'     => 'button_font',
+					'label'   => 'فونت دکمه‌ها',
+					'type'    => 'font',
+					'default' => 'Vazirmatn',
+				),
+				array(
+					'key'     => 'weights',
+					'label'   => 'وزن‌های فعال',
+					'type'    => 'multi_select',
+					'default' => array( '400', '500', '700' ),
+					'options' => array(
+						'100' => '100',
+						'200' => '200',
+						'300' => '300',
+						'400' => '400',
+						'500' => '500',
+						'600' => '600',
+						'700' => '700',
+						'800' => '800',
+						'900' => '900',
+					),
+				),
+				array(
+					'key'     => 'base_size_desktop',
+					'label'   => 'اندازه پایه — دسکتاپ (px)',
+					'type'    => 'number',
+					'default' => 16,
+					'min'     => 10,
+					'max'     => 32,
+					'step'    => 1,
+				),
+				array(
+					'key'     => 'base_size_tablet',
+					'label'   => 'اندازه پایه — تبلت (px)',
+					'type'    => 'number',
+					'default' => 15,
+					'min'     => 10,
+					'max'     => 32,
+					'step'    => 1,
+				),
+				array(
+					'key'     => 'base_size_mobile',
+					'label'   => 'اندازه پایه — موبایل (px)',
+					'type'    => 'number',
+					'default' => 14,
+					'min'     => 10,
+					'max'     => 32,
+					'step'    => 1,
+				),
+				array(
+					'key'     => 'line_height',
+					'label'   => 'ارتفاع خط',
+					'type'    => 'number',
+					'default' => 1.75,
+					'min'     => 1,
+					'max'     => 3,
+					'step'    => 0.05,
+				),
+				array(
+					'key'     => 'letter_spacing',
+					'label'   => 'فاصله حروف (em)',
+					'type'    => 'number',
+					'default' => 0,
+					'min'     => -0.1,
+					'max'     => 0.5,
+					'step'    => 0.01,
+				),
+				array(
+					'key'     => 'font_display',
+					'label'   => 'font-display',
+					'type'    => 'select',
+					'default' => 'swap',
+					'options' => array(
+						'auto'     => 'auto',
+						'block'    => 'block',
+						'swap'     => 'swap',
+						'fallback' => 'fallback',
+						'optional' => 'optional',
+					),
+				),
+			),
+		);
+
+		$sections['fonts_google'] = array(
+			'label'       => 'گوگل فونت',
+			'group'       => 'fonts',
+			'description' => 'جست‌وجو، دانلود و میزبانی محلی فونت‌های Google.',
+			'fields'      => array(
+				array(
+					'key'     => 'allow_download',
+					'label'   => 'اجازه دانلود از Google Fonts',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'max_file_mb',
+					'label'   => 'حداکثر حجم هر فایل (MB)',
+					'type'    => 'number',
+					'default' => 5,
+					'min'     => 1,
+					'max'     => 30,
+					'step'    => 1,
+				),
+				array(
+					'key'     => 'subsets',
+					'label'   => 'زیرمجموعه‌ها',
+					'type'    => 'multi_select',
+					'default' => array( 'arabic', 'latin', 'latin-ext' ),
+					'options' => array(
+						'arabic'    => 'Arabic',
+						'latin'     => 'Latin',
+						'latin-ext' => 'Latin Extended',
+					),
+				),
+				array(
+					'key'     => 'unicode_range',
+					'label'   => 'حفظ unicode-range',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+			),
+		);
+
+		$sections['fonts_custom'] = array(
+			'label'       => 'فونت سفارشی',
+			'group'       => 'fonts',
+			'description' => 'آپلود فونت اختصاصی (woff2/woff/ttf).',
+			'fields'      => array(
+				array(
+					'key'     => 'allow_upload',
+					'label'   => 'اجازه آپلود فونت',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'allowed_ext',
+					'label'   => 'پسوندهای مجاز',
+					'type'    => 'text',
+					'default' => 'woff2,woff,ttf,otf',
+				),
+				array(
+					'key'     => 'max_file_mb',
+					'label'   => 'حداکثر حجم (MB)',
+					'type'    => 'number',
+					'default' => 10,
+					'min'     => 1,
+					'max'     => 50,
+					'step'    => 1,
+				),
+			),
+		);
+
+		$sections['assets_fonts'] = array(
+			'label'       => 'مدیریت فونت‌ها',
+			'group'       => 'fonts',
+			'description' => 'فهرست فونت‌های نصب‌شده، پیش‌فرض‌ها و همگام‌سازی با المنتور.',
+			'fields'      => array(
+				array(
+					'key'     => 'sync_elementor',
+					'label'   => 'افزودن فونت‌ها به لیست المنتور',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'preload_default',
+					'label'   => 'preload فونت پیش‌فرض',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'per_page',
+					'label'   => 'تعداد در هر صفحه',
+					'type'    => 'number',
+					'default' => 20,
+					'min'     => 5,
+					'max'     => 200,
+					'step'    => 5,
+				),
+			),
+		);
+
+		$sections['icons'] = array(
+			'label'       => 'آیکون‌ها',
+			'group'       => 'fonts',
+			'description' => 'Material Symbols (فونت متغیر) و Material Icons کلاسیک.',
+			'fields'      => array(
+				array(
+					'key'     => 'provider',
+					'label'   => 'ارائه‌دهنده پیش‌فرض',
+					'type'    => 'select',
+					'default' => 'material-symbols',
+					'options' => array(
+						'material-symbols' => 'Material Symbols',
+						'material-icons'   => 'Material Icons',
+						'custom-svg'       => 'SVG اختصاصی',
+					),
+				),
+				array(
+					'key'     => 'style',
+					'label'   => 'سبک فونت متغیر',
+					'type'    => 'select',
+					'default' => 'outlined',
+					'options' => array(
+						'outlined' => 'Outlined',
+						'rounded'  => 'Rounded',
+						'sharp'    => 'Sharp',
+					),
+				),
+				array(
+					'key'     => 'weight',
+					'label'   => 'Weight (100-700)',
+					'type'    => 'number',
+					'default' => 400,
+					'min'     => 100,
+					'max'     => 700,
+					'step'    => 100,
+				),
+				array(
+					'key'     => 'fill',
+					'label'   => 'Fill (0-1)',
+					'type'    => 'number',
+					'default' => 0,
+					'min'     => 0,
+					'max'     => 1,
+					'step'    => 1,
+				),
+				array(
+					'key'     => 'grade',
+					'label'   => 'Grade (-25 تا 200)',
+					'type'    => 'number',
+					'default' => 0,
+					'min'     => -25,
+					'max'     => 200,
+					'step'    => 25,
+				),
+				array(
+					'key'     => 'optical_size',
+					'label'   => 'Optical Size (20 تا 48)',
+					'type'    => 'number',
+					'default' => 24,
+					'min'     => 20,
+					'max'     => 48,
+					'step'    => 4,
+				),
+				array(
+					'key'     => 'color',
+					'label'   => 'رنگ پیش‌فرض',
+					'type'    => 'color',
+					'default' => 'currentColor',
+				),
+				array(
+					'key'     => 'size',
+					'label'   => 'اندازه پیش‌فرض (px)',
+					'type'    => 'number',
+					'default' => 24,
+					'min'     => 12,
+					'max'     => 96,
+					'step'    => 2,
+				),
+			),
+		);
+
+		$sections['icon_widget'] = array(
+			'label'       => 'ابزارک آیکون',
+			'group'       => 'fonts',
+			'description' => 'کنترل‌های پیش‌فرض ابزارک آیکون در المنتور.',
+			'fields'      => array(
+				array(
+					'key'     => 'show_position_control',
+					'label'   => 'کنترل موقعیت (قبل/بعد متن)',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'show_variation_controls',
+					'label'   => 'نمایش کنترل‌های Weight/Fill/Grade',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'default_position',
+					'label'   => 'موقعیت پیش‌فرض',
+					'type'    => 'select',
+					'default' => 'before',
+					'options' => array(
+						'before' => 'قبل از متن',
+						'after'  => 'بعد از متن',
+						'only'   => 'فقط آیکون',
+					),
+				),
+			),
+		);
+
+		// -------------------------------------------- Design System (7).
+		$sections['colors'] = array(
+			'label'       => 'رنگ‌ها',
+			'group'       => 'design',
+			'description' => 'پالت پایه و رنگ‌های معنایی.',
+			'fields'      => array(
+				array(
+					'key'     => 'primary',
+					'label'   => 'Primary',
+					'type'    => 'color',
+					'default' => '#2563eb',
+				),
+				array(
+					'key'     => 'primary_hover',
+					'label'   => 'Primary Hover',
+					'type'    => 'color',
+					'default' => '#1d4ed8',
+				),
+				array(
+					'key'     => 'secondary',
+					'label'   => 'Secondary',
+					'type'    => 'color',
+					'default' => '#0f766e',
+				),
+				array(
+					'key'     => 'accent',
+					'label'   => 'Accent',
+					'type'    => 'color',
+					'default' => '#f59e0b',
+				),
+				array(
+					'key'     => 'text',
+					'label'   => 'متن',
+					'type'    => 'color',
+					'default' => '#111827',
+				),
+				array(
+					'key'     => 'muted',
+					'label'   => 'متن کم‌رنگ',
+					'type'    => 'color',
+					'default' => '#6b7280',
+				),
+				array(
+					'key'     => 'background',
+					'label'   => 'پس‌زمینه',
+					'type'    => 'color',
+					'default' => '#ffffff',
+				),
+				array(
+					'key'     => 'surface',
+					'label'   => 'سطح',
+					'type'    => 'color',
+					'default' => '#f9fafb',
+				),
+				array(
+					'key'     => 'border',
+					'label'   => 'حاشیه',
+					'type'    => 'color',
+					'default' => '#e5e7eb',
+				),
+				array(
+					'key'     => 'success',
+					'label'   => 'موفق',
+					'type'    => 'color',
+					'default' => '#16a34a',
+				),
+				array(
+					'key'     => 'warning',
+					'label'   => 'هشدار',
+					'type'    => 'color',
+					'default' => '#d97706',
+				),
+				array(
+					'key'     => 'danger',
+					'label'   => 'خطا',
+					'type'    => 'color',
+					'default' => '#dc2626',
+				),
+			),
+		);
+
+		$sections['spacing'] = array(
+			'label'       => 'فاصله‌ها',
+			'group'       => 'design',
+			'description' => 'مقیاس فاصله‌گذاری (px).',
+			'fields'      => array(
+				array(
+					'key'     => 'unit',
+					'label'   => 'واحد',
+					'type'    => 'select',
+					'default' => 'px',
+					'options' => array(
+						'px' => 'px',
+						'rem' => 'rem',
+					),
+				),
+				array(
+					'key'     => 'scale',
+					'label'   => 'مقیاس',
+					'type'    => 'text',
+					'default' => '4,8,12,16,24,32,48,64',
+					'description' => 'مقادیر با کاما جدا می‌شوند.',
+				),
+			),
+		);
+
+		$sections['radius'] = array(
+			'label'       => 'شعاع گوشه‌ها',
+			'group'       => 'design',
+			'description' => 'گردی گوشه‌ها.',
+			'fields'      => array(
+				array(
+					'key'     => 'sm',
+					'label'   => 'Small',
+					'type'    => 'number',
+					'default' => 4,
+					'min'     => 0,
+					'max'     => 40,
+					'step'    => 1,
+				),
+				array(
+					'key'     => 'md',
+					'label'   => 'Medium',
+					'type'    => 'number',
+					'default' => 8,
+					'min'     => 0,
+					'max'     => 60,
+					'step'    => 1,
+				),
+				array(
+					'key'     => 'lg',
+					'label'   => 'Large',
+					'type'    => 'number',
+					'default' => 16,
+					'min'     => 0,
+					'max'     => 80,
+					'step'    => 1,
+				),
+				array(
+					'key'     => 'pill',
+					'label'   => 'Pill',
+					'type'    => 'number',
+					'default' => 999,
+					'min'     => 0,
+					'max'     => 999,
+					'step'    => 1,
+				),
+			),
+		);
+
+		$sections['shadows'] = array(
+			'label'       => 'سایه‌ها',
+			'group'       => 'design',
+			'description' => 'سایه‌های استاندارد.',
+			'fields'      => array(
+				array(
+					'key'     => 'sm',
+					'label'   => 'Small',
+					'type'    => 'text',
+					'default' => '0 1px 2px rgba(0,0,0,.06)',
+				),
+				array(
+					'key'     => 'md',
+					'label'   => 'Medium',
+					'type'    => 'text',
+					'default' => '0 4px 12px rgba(0,0,0,.08)',
+				),
+				array(
+					'key'     => 'lg',
+					'label'   => 'Large',
+					'type'    => 'text',
+					'default' => '0 12px 32px rgba(0,0,0,.12)',
+				),
+			),
+		);
+
+		$sections['borders'] = array(
+			'label'       => 'حاشیه‌ها',
+			'group'       => 'design',
+			'description' => 'ضخامت و سبک حاشیه.',
+			'fields'      => array(
+				array(
+					'key'     => 'width',
+					'label'   => 'ضخامت (px)',
+					'type'    => 'number',
+					'default' => 1,
+					'min'     => 0,
+					'max'     => 8,
+					'step'    => 1,
+				),
+				array(
+					'key'     => 'style',
+					'label'   => 'سبک',
+					'type'    => 'select',
+					'default' => 'solid',
+					'options' => array(
+						'solid'  => 'solid',
+						'dashed' => 'dashed',
+						'dotted' => 'dotted',
+						'none'   => 'none',
+					),
+				),
+			),
+		);
+
+		$sections['buttons'] = array(
+			'label'       => 'دکمه‌ها',
+			'group'       => 'design',
+			'description' => 'تنظیمات پیش‌فرض دکمه.',
+			'fields'      => array(
+				array(
+					'key'     => 'padding_x',
+					'label'   => 'پدینگ افقی (px)',
+					'type'    => 'number',
+					'default' => 20,
+					'min'     => 4,
+					'max'     => 80,
+					'step'    => 2,
+				),
+				array(
+					'key'     => 'padding_y',
+					'label'   => 'پدینگ عمودی (px)',
+					'type'    => 'number',
+					'default' => 12,
+					'min'     => 4,
+					'max'     => 60,
+					'step'    => 2,
+				),
+				array(
+					'key'     => 'radius',
+					'label'   => 'گردی (px)',
+					'type'    => 'number',
+					'default' => 8,
+					'min'     => 0,
+					'max'     => 60,
+					'step'    => 1,
+				),
+				array(
+					'key'     => 'weight',
+					'label'   => 'وزن فونت',
+					'type'    => 'select',
+					'default' => '500',
+					'options' => array(
+						'400' => '400',
+						'500' => '500',
+						'600' => '600',
+						'700' => '700',
+					),
+				),
+				array(
+					'key'     => 'transition_ms',
+					'label'   => 'زمان انتقال (ms)',
+					'type'    => 'number',
+					'default' => 180,
+					'min'     => 0,
+					'max'     => 1000,
+					'step'    => 10,
+				),
+			),
+		);
+
+		$sections['forms'] = array(
+			'label'       => 'فرم‌ها',
+			'group'       => 'design',
+			'description' => 'فیلدهای ورودی و حالت‌های اعتبارسنجی.',
+			'fields'      => array(
+				array(
+					'key'     => 'input_height',
+					'label'   => 'ارتفاع فیلد (px)',
+					'type'    => 'number',
+					'default' => 44,
+					'min'     => 28,
+					'max'     => 72,
+					'step'    => 2,
+				),
+				array(
+					'key'     => 'input_radius',
+					'label'   => 'گردی فیلد (px)',
+					'type'    => 'number',
+					'default' => 8,
+					'min'     => 0,
+					'max'     => 40,
+					'step'    => 1,
+				),
+				array(
+					'key'     => 'focus_ring',
+					'label'   => 'حلقه فوکوس',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'label_position',
+					'label'   => 'موقعیت برچسب',
+					'type'    => 'select',
+					'default' => 'top',
+					'options' => array(
+						'top'     => 'بالای فیلد',
+						'inside'  => 'داخل فیلد',
+						'hidden'  => 'بدون برچسب',
+					),
+				),
+			),
+		);
+
+		// ---------------------------------------------- Components (6).
+		$sections['cards'] = array(
+			'label'       => 'کارت‌ها',
+			'group'       => 'components',
+			'description' => 'کارت محصول و کارت محتوا.',
+			'fields'      => array(
+				array(
+					'key'     => 'padding',
+					'label'   => 'پدینگ (px)',
+					'type'    => 'number',
+					'default' => 16,
+					'min'     => 0,
+					'max'     => 64,
+					'step'    => 2,
+				),
+				array(
+					'key'     => 'radius',
+					'label'   => 'گردی (px)',
+					'type'    => 'number',
+					'default' => 12,
+					'min'     => 0,
+					'max'     => 60,
+					'step'    => 1,
+				),
+				array(
+					'key'     => 'image_ratio',
+					'label'   => 'نسبت تصویر',
+					'type'    => 'select',
+					'default' => '1:1',
+					'options' => array(
+						'1:1'  => '1:1',
+						'4:3'  => '4:3',
+						'3:4'  => '3:4',
+						'16:9' => '16:9',
+					),
+				),
+				array(
+					'key'     => 'hover_lift',
+					'label'   => 'بالا آمدن در هاور',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+			),
+		);
+
+		$sections['tables'] = array(
+			'label'       => 'جدول‌ها',
+			'group'       => 'components',
+			'description' => 'جدول‌های سبد خرید و لیست‌ها.',
+			'fields'      => array(
+				array(
+					'key'     => 'zebra',
+					'label'   => 'ردیف‌های یک‌درمیان',
+					'type'    => 'toggle',
+					'default' => false,
+				),
+				array(
+					'key'     => 'cell_padding',
+					'label'   => 'پدینگ سلول (px)',
+					'type'    => 'number',
+					'default' => 12,
+					'min'     => 4,
+					'max'     => 40,
+					'step'    => 2,
+				),
+				array(
+					'key'     => 'sticky_header',
+					'label'   => 'هدر چسبان',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+			),
+		);
+
+		$sections['badges'] = array(
+			'label'       => 'نشان‌ها',
+			'group'       => 'components',
+			'description' => 'نشان تخفیف، موجودی و برچسب‌ها.',
+			'fields'      => array(
+				array(
+					'key'     => 'discount_color',
+					'label'   => 'رنگ تخفیف',
+					'type'    => 'color',
+					'default' => '#dc2626',
+				),
+				array(
+					'key'     => 'new_color',
+					'label'   => 'رنگ جدید',
+					'type'    => 'color',
+					'default' => '#16a34a',
+				),
+				array(
+					'key'     => 'radius',
+					'label'   => 'گردی (px)',
+					'type'    => 'number',
+					'default' => 999,
+					'min'     => 0,
+					'max'     => 999,
+					'step'    => 1,
+				),
+				array(
+					'key'     => 'uppercase',
+					'label'   => 'حروف بزرگ',
+					'type'    => 'toggle',
+					'default' => false,
+				),
+			),
+		);
+
+		$sections['alerts'] = array(
+			'label'       => 'هشدارها',
+			'group'       => 'components',
+			'description' => 'پیام‌های سیستمی و notice ووکامرس.',
+			'fields'      => array(
+				array(
+					'key'     => 'position',
+					'label'   => 'موقعیت',
+					'type'    => 'select',
+					'default' => 'top',
+					'options' => array(
+						'top'    => 'بالای صفحه',
+						'bottom' => 'پایین صفحه',
+						'inline' => 'در محل',
+					),
+				),
+				array(
+					'key'     => 'dismissible',
+					'label'   => 'قابل بستن',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'timeout',
+					'label'   => 'زمان بستن خودکار (ثانیه)',
+					'type'    => 'number',
+					'default' => 6,
+					'min'     => 0,
+					'max'     => 60,
+					'step'    => 1,
+				),
+			),
+		);
+
+		$sections['overlays'] = array(
+			'label'       => 'Modal و Drawer',
+			'group'       => 'components',
+			'description' => 'پنجره‌های شناور، سبد خرید، ابزارک Tooltip.',
+			'fields'      => array(
+				array(
+					'key'     => 'drawer_side',
+					'label'   => 'سمت Drawer',
+					'type'    => 'select',
+					'default' => 'right',
+					'options' => array(
+						'right' => 'راست (RTL)',
+						'left'  => 'چپ',
+					),
+				),
+				array(
+					'key'     => 'backdrop_opacity',
+					'label'   => 'شفافیت پس‌زمینه (0-1)',
+					'type'    => 'number',
+					'default' => 0.5,
+					'min'     => 0,
+					'max'     => 1,
+					'step'    => 0.05,
+				),
+				array(
+					'key'     => 'tooltip_theme',
+					'label'   => 'تم Tooltip',
+					'type'    => 'select',
+					'default' => 'dark',
+					'options' => array(
+						'dark'  => 'Dark',
+						'light' => 'Light',
+					),
+				),
+			),
+		);
+
+		$sections['pagination'] = array(
+			'label'       => 'صفحه‌بندی',
+			'group'       => 'components',
+			'description' => 'صفحه‌بندی آرشیو و لیست محصولات.',
+			'fields'      => array(
+				array(
+					'key'     => 'style',
+					'label'   => 'سبک',
+					'type'    => 'select',
+					'default' => 'numbers',
+					'options' => array(
+						'numbers'    => 'شماره‌ها',
+						'prev_next'  => 'قبلی/بعدی',
+						'load_more'  => 'بارگذاری بیشتر (AJAX)',
+					),
+				),
+				array(
+					'key'     => 'per_page',
+					'label'   => 'تعداد در صفحه',
+					'type'    => 'number',
+					'default' => 12,
+					'min'     => 1,
+					'max'     => 100,
+					'step'    => 1,
+				),
+				array(
+					'key'     => 'ajax',
+					'label'   => 'بارگذاری AJAX',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+			),
+		);
+
+		// ------------------------------------------------ Delivery (6).
+		$sections['assets_images'] = array(
+			'label'       => 'تصاویر',
+			'group'       => 'delivery',
+			'description' => 'مدیریت تصاویر پلتفرم.',
+			'fields'      => array(
+				array(
+					'key'     => 'webp',
+					'label'   => 'تبدیل به WebP',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'max_file_mb',
+					'label'   => 'حداکثر حجم (MB)',
+					'type'    => 'number',
+					'default' => 8,
+					'min'     => 1,
+					'max'     => 40,
+					'step'    => 1,
+				),
+				array(
+					'key'     => 'lazy',
+					'label'   => 'lazy-load',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+			),
+		);
+
+		$sections['assets_svg'] = array(
+			'label'       => 'SVG',
+			'group'       => 'delivery',
+			'description' => 'آپلود و پاک‌سازی SVG.',
+			'fields'      => array(
+				array(
+					'key'     => 'allow_upload',
+					'label'   => 'اجازه آپلود SVG',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'sanitize',
+					'label'   => 'پاک‌سازی اجباری',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'strip_ids',
+					'label'   => 'حذف id/class داخلی',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'inline',
+					'label'   => 'رندر inline برای رنگ‌پذیری',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+			),
+		);
+
+		$sections['assets_custom'] = array(
+			'label'       => 'CSS/JS سفارشی',
+			'group'       => 'delivery',
+			'description' => 'کدهای اختصاصی پلتفرم.',
+			'fields'      => array(
+				array(
+					'key'     => 'enabled',
+					'label'   => 'فعال',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'css',
+					'label'   => 'CSS',
+					'type'    => 'code',
+					'default' => '',
+				),
+				array(
+					'key'     => 'js',
+					'label'   => 'JS',
+					'type'    => 'code',
+					'default' => '',
+				),
+				array(
+					'key'     => 'location',
+					'label'   => 'محل بارگذاری JS',
+					'type'    => 'select',
+					'default' => 'footer',
+					'options' => array(
+						'footer' => 'فوتر',
+						'head'   => 'هدر',
+					),
+				),
+			),
+		);
+
+		$sections['elementor'] = array(
+			'label'       => 'المنتور',
+			'group'       => 'delivery',
+			'description' => 'سطوح یکپارچه‌سازی توکن‌ها با المنتور.',
+			'fields'      => array(
+				array(
+					'key'     => 'integration_level',
+					'label'   => 'سطح یکپارچه‌سازی',
+					'type'    => 'select',
+					'default' => 'variables',
+					'options' => array(
+						'variables' => 'سطح ۱ — CSS Variables (پیشنهادی)',
+						'picker'    => 'سطح ۲ — Token Picker در ابزارک‌ها',
+						'kit'       => 'سطح ۳ — همگام‌سازی با Global Kit',
+					),
+				),
+				array(
+					'key'     => 'sync_kit',
+					'label'   => 'همگام‌سازی با Global Kit',
+					'type'    => 'toggle',
+					'default' => false,
+				),
+				array(
+					'key'     => 'kit_backup',
+					'label'   => 'تهیه نسخه پشتیبان قبل از همگام‌سازی',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'hide_woo_widgets',
+					'label'   => 'پنهان‌سازی ابزارک‌های پیش‌فرض ووکامرس در المنتور',
+					'type'    => 'toggle',
+					'default' => false,
+				),
+			),
+		);
+
+		$sections['performance'] = array(
+			'label'       => 'عملکرد',
+			'group'       => 'delivery',
+			'description' => 'بهینه‌سازی بارگذاری دارایی‌ها.',
+			'fields'      => array(
+				array(
+					'key'     => 'preload_fonts',
+					'label'   => 'preload فونت‌های حیاتی',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'font_display_swap',
+					'label'   => 'اجبار font-display: swap',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'inline_tokens',
+					'label'   => 'تزریق inline توکن‌ها (حذف درخواست اضافه)',
+					'type'    => 'toggle',
+					'default' => false,
+				),
+				array(
+					'key'     => 'minify',
+					'label'   => 'فشرده‌سازی CSS تولیدشده',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'cache_bust',
+					'label'   => 'نسخه‌گذاری با hash محتوا',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'defer_js',
+					'label'   => 'defer اسکریپت‌های پلتفرم',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+			),
+		);
+
+		$sections['rest_api'] = array(
+			'label'       => 'REST API',
+			'group'       => 'delivery',
+			'description' => 'دسترسی برنامه‌نویسی‌شده به تنظیمات و دارایی‌ها.',
+			'fields'      => array(
+				array(
+					'key'     => 'enabled',
+					'label'   => 'فعال‌سازی REST',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+				array(
+					'key'     => 'namespace',
+					'label'   => 'namespace',
+					'type'    => 'text',
+					'default' => 'dashwoo/v1',
+				),
+				array(
+					'key'     => 'require_auth_write',
+					'label'   => 'اجبار احراز هویت برای نوشتن',
+					'type'    => 'toggle',
+					'default' => true,
+				),
+			),
+		);
+
+		return $sections;
+	}
+
+	/**
+	 * Default values, shaped exactly like the option payload.
+	 *
+	 * @return array<string,array<string,mixed>>
+	 */
+	public static function defaults() {
+		$defaults = array();
+
+		foreach ( self::all() as $key => $section ) {
+			$defaults[ $key ] = array();
+			foreach ( (array) ( $section['fields'] ?? array() ) as $field ) {
+				$defaults[ $key ][ $field['key'] ] = $field['default'];
+			}
+		}
+
+		return $defaults;
+	}
+
+	/**
+	 * Field ids per section.
+	 *
+	 * @return array<string,array<int,string>>
+	 */
+	public static function field_keys() {
+		$map = array();
+
+		foreach ( self::all() as $key => $section ) {
+			$map[ $key ] = array();
+			foreach ( (array) ( $section['fields'] ?? array() ) as $field ) {
+				$map[ $key ][] = $field['key'];
+			}
+		}
+
+		return $map;
+	}
+
+	/**
+	 * Total number of fields.
+	 *
+	 * @return int
+	 */
+	public static function count_fields() {
+		$total = 0;
+
+		foreach ( self::all() as $section ) {
+			$total += count( (array) ( $section['fields'] ?? array() ) );
+		}
+
+		return $total;
+	}
+
+	/**
+	 * Section keys in navigation order (grouped).
+	 *
+	 * @return array<string,array<int,string>>
+	 */
+	public static function by_group() {
+		$out = array();
+
+		foreach ( array_keys( self::groups() ) as $group ) {
+			$out[ $group ] = array();
+		}
+
+		foreach ( self::all() as $key => $section ) {
+			$group = isset( $section['group'] ) ? $section['group'] : 'core';
+			if ( ! isset( $out[ $group ] ) ) {
+				$out[ $group ] = array();
+			}
+			$out[ $group ][] = $key;
+		}
+
+		return $out;
+	}
+}

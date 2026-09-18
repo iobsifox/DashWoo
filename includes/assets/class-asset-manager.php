@@ -1,0 +1,554 @@
+<?php
+/**
+ * Asset Manager facade: one API for fonts, icons, images, SVG and custom code.
+ *
+ * @package DashWoo
+ */
+
+namespace DashWoo\Assets;
+
+use DashWoo\Cache\Cache;
+use DashWoo\DesignSystem\Compiler;
+use DashWoo\Support\Filesystem;
+use DashWoo\Support\Logger;
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * Asset manager.
+ */
+final class Asset_Manager {
+
+	const STYLE_HANDLE = 'dashwoo-platform';
+
+	/**
+	 * Allowed uploads per type: extension => mime.
+	 *
+	 * @return array<string,array<string,mixed>>
+	 */
+	public function rules() {
+		return array(
+			'font'   => array(
+				'ext'   => array( 'woff2', 'woff', 'ttf', 'otf' ),
+				'max'   => (int) dashwoo_get_setting( 'fonts_custom.max_file_mb', 10 ) * 1048576,
+				'magic' => array( 'wOF2', 'wOFF', 'OTTO', "\x00\x01\x00\x00" ),
+				'dir'   => 'fonts',
+			),
+			'image'  => array(
+				'ext'   => array( 'jpg', 'jpeg', 'png', 'webp', 'gif', 'avif' ),
+				'max'   => (int) dashwoo_get_setting( 'assets_images.max_file_mb', 8 ) * 1048576,
+				'magic' => array(),
+				'dir'   => 'images',
+			),
+			'svg'    => array(
+				'ext'   => array( 'svg' ),
+				'max'   => 2097152,
+				'magic' => array( '<svg', '<?xml' ),
+				'dir'   => 'svg',
+			),
+			'custom' => array(
+				'ext'   => array( 'css', 'js', 'json' ),
+				'max'   => 1048576,
+				'magic' => array(),
+				'dir'   => 'custom',
+			),
+		);
+	}
+
+	/**
+	 * Singleton.
+	 *
+	 * @var Asset_Manager|null
+	 */
+	private static $instance = null;
+
+	/**
+	 * Singleton accessor.
+	 *
+	 * @return Asset_Manager
+	 */
+	public static function instance() {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
+
+	/**
+	 * Hooks.
+	 *
+	 * @return void
+	 */
+	public function boot() {
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue' ), 30 );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin' ), 30 );
+		add_action( 'wp_head', array( $this, 'render_custom_css' ), 99 );
+		add_action( 'wp_footer', array( $this, 'render_custom_js' ), 99 );
+		add_action( 'wp_head', array( $this, 'render_custom_js' ), 99 );
+		add_filter( 'upload_mimes', array( $this, 'allow_svg_mime' ) );
+	}
+
+	/**
+	 * Platform stylesheet + compiled tokens.
+	 *
+	 * @return void
+	 */
+	public function enqueue() {
+		if ( ! dashwoo_is_on( 'general.enabled' ) ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			self::STYLE_HANDLE,
+			DASHWOO_URL . 'assets/css/dashwoo.css',
+			array(),
+			DASHWOO_VERSION
+		);
+
+		$compiled = Cache::instance()->get( 'tokens_compiled' );
+
+		if ( is_array( $compiled ) && ! empty( $compiled['url'] ) ) {
+			wp_enqueue_style( 'dashwoo-tokens', $compiled['url'], array( self::STYLE_HANDLE ), $compiled['hash'] );
+		} else {
+			// Fallback: inject the variables inline, never a remote request.
+			wp_add_inline_style( self::STYLE_HANDLE, Compiler::instance()->inline_css() );
+		}
+	}
+
+	/**
+	 * Admin assets.
+	 *
+	 * @param string $hook Current admin page.
+	 * @return void
+	 */
+	public function enqueue_admin( $hook ) {
+		if ( false === strpos( (string) $hook, 'dashwoo' ) ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'dashwoo-admin',
+			DASHWOO_URL . 'assets/css/admin.css',
+			array(),
+			DASHWOO_VERSION
+		);
+		wp_enqueue_script(
+			'dashwoo-admin',
+			DASHWOO_URL . 'assets/js/admin.js',
+			array( 'wp-api-fetch' ),
+			DASHWOO_VERSION,
+			true
+		);
+		wp_localize_script(
+			'dashwoo-admin',
+			'DashWooData',
+			array(
+				'restUrl' => esc_url_raw( rest_url( 'dashwoo/v1' ) ),
+				'nonce'   => wp_create_nonce( 'wp_rest' ),
+				'version' => DASHWOO_VERSION,
+			)
+		);
+	}
+
+	/**
+	 * Custom CSS from the settings (already sanitised on save).
+	 *
+	 * @return void
+	 */
+	public function render_custom_css() {
+		if ( ! dashwoo_is_on( 'assets_custom.enabled' ) ) {
+			return;
+		}
+
+		$css = (string) dashwoo_get_setting( 'assets_custom.css', '' );
+
+		if ( '' === trim( $css ) ) {
+			return;
+		}
+
+		printf( "<style id=\"dashwoo-custom-css\">\n%s\n</style>\n", $this->strip_breaks( $css, 'style' ) ); // phpcs:ignore WordPress.Security.EscapeOutput
+	}
+
+	/**
+	 * Custom JS from the settings.
+	 *
+	 * @return void
+	 */
+	public function render_custom_js() {
+		if ( ! dashwoo_is_on( 'assets_custom.enabled' ) ) {
+			return;
+		}
+
+		$js = (string) dashwoo_get_setting( 'assets_custom.js', '' );
+
+		if ( '' === trim( $js ) ) {
+			return;
+		}
+
+		$location = dashwoo_get_setting( 'assets_custom.location', 'footer' );
+		$wanted   = ( 'head' === $location ) ? 'wp_head' : 'wp_footer';
+
+		if ( current_filter() !== $wanted ) {
+			return;
+		}
+
+		printf( "<script id=\"dashwoo-custom-js\">\n%s\n</script>\n", $this->strip_breaks( $js, 'script' ) ); // phpcs:ignore WordPress.Security.EscapeOutput
+	}
+
+	/**
+	 * Remove the closing tag of the hosting element (defence in depth).
+	 *
+	 * @param string $code Raw code.
+	 * @param string $tag  style|script.
+	 * @return string
+	 */
+	public function strip_breaks( $code, $tag ) {
+		$code = (string) $code;
+
+		// Remove both the opening and the closing form of every tag that could
+		// terminate or re-open the element the snippet is printed inside.
+		foreach ( array( 'style', 'script' ) as $forbidden ) {
+			$code = preg_replace( '#<\s*/?\s*' . $forbidden . '\b[^>]*>#i', '', (string) $code );
+		}
+
+		return trim( (string) $code );
+	}
+
+	/**
+	 * Register the SVG mime so the media library accepts it (admin only).
+	 *
+	 * @param array<string,string> $mimes Mimes.
+	 * @return array<string,string>
+	 */
+	public function allow_svg_mime( $mimes ) {
+		if ( dashwoo_is_on( 'assets_svg.allow_upload' ) && current_user_can( 'manage_options' ) ) {
+			$mimes['svg'] = 'image/svg+xml';
+		}
+
+		return $mimes;
+	}
+
+	/**
+	 * Import an uploaded file into the DashWoo storage.
+	 *
+	 * @param string              $tmp_path Temporary file path.
+	 * @param array<string,mixed> $args     type, label, slug, provider, role, meta.
+	 * @return array<string,mixed>|\WP_Error
+	 */
+	public function import_file( $tmp_path, array $args = array() ) {
+		$type  = isset( $args['type'] ) && in_array( $args['type'], Registry::instance()->types(), true ) ? $args['type'] : 'image';
+		$rules = $this->rules();
+
+		if ( ! isset( $rules[ $type ] ) ) {
+			return new \WP_Error( 'dashwoo_asset_type', sprintf( 'Type "%s" does not accept uploads.', $type ) );
+		}
+
+		if ( ! is_readable( $tmp_path ) ) {
+			return new \WP_Error( 'dashwoo_asset_unreadable', 'The uploaded file is not readable.' );
+		}
+
+		$size = (int) filesize( $tmp_path );
+		$max  = (int) $rules[ $type ]['max'];
+
+		if ( $size <= 0 ) {
+			return new \WP_Error( 'dashwoo_asset_empty', 'The uploaded file is empty.' );
+		}
+		if ( $size > $max ) {
+			return new \WP_Error(
+				'dashwoo_asset_too_large',
+				sprintf( 'File is bigger than the %s limit.', Filesystem::format_size( $max ) )
+			);
+		}
+
+		$extension = strtolower( (string) pathinfo( $tmp_path, PATHINFO_EXTENSION ) );
+		if ( ! in_array( $extension, (array) $rules[ $type ]['ext'], true ) ) {
+			return new \WP_Error(
+				'dashwoo_asset_extension',
+				sprintf( 'Extension ".%s" is not allowed for %s assets.', $extension, $type )
+			);
+		}
+
+		$contents = Filesystem::get( $tmp_path );
+		if ( false === $contents ) {
+			return new \WP_Error( 'dashwoo_asset_unreadable', 'Cannot read the uploaded file.' );
+		}
+
+		$magic = (array) $rules[ $type ]['magic'];
+		if ( $magic ) {
+			$ok = false;
+			foreach ( $magic as $signature ) {
+				if ( 0 === strncmp( (string) $contents, $signature, strlen( $signature ) ) ) {
+					$ok = true;
+					break;
+				}
+			}
+			if ( ! $ok ) {
+				return new \WP_Error( 'dashwoo_asset_signature', 'The file signature does not match its type.' );
+			}
+		}
+
+		if ( 'svg' === $type ) {
+			if ( ! dashwoo_is_on( 'assets_svg.allow_upload' ) ) {
+				return new \WP_Error( 'dashwoo_svg_disabled', 'SVG uploads are disabled in the settings.' );
+			}
+
+			$audit = Svg_Sanitizer::audit( (string) $contents );
+			$contents = Svg_Sanitizer::sanitize( (string) $contents, dashwoo_is_on( 'assets_svg.strip_ids' ) );
+
+			if ( '' === $contents ) {
+				return new \WP_Error( 'dashwoo_svg_invalid', 'The SVG could not be sanitised.' );
+			}
+		}
+
+		$registry  = Registry::instance();
+		$storage   = Storage::instance();
+		$slug      = $registry->slug( $args['slug'] ?? pathinfo( $tmp_path, PATHINFO_FILENAME ) );
+		$slug      = $slug ? $slug : 'asset-' . substr( md5( (string) $size . microtime() ), 0, 8 );
+		$directory = $storage->path( $rules[ $type ]['dir'] ) . $slug . '/';
+		$file_name = sanitize_file_name( $slug . '.' . $extension );
+		$abs       = $directory . $file_name;
+
+		if ( ! Filesystem::put( $abs, $contents ) ) {
+			return new \WP_Error( 'dashwoo_asset_write', 'The asset could not be written to the uploads directory.' );
+		}
+
+		$meta = array_merge(
+			isset( $args['meta'] ) && is_array( $args['meta'] ) ? $args['meta'] : array(),
+			array(
+				'file'       => $file_name,
+				'path'       => $storage->relative( $abs ),
+				'extension'  => $extension,
+				'mime'       => isset( $rules[ $type ]['ext'] ) ? $this->mime_for( $extension ) : '',
+				'bytes'      => $size,
+				'sha256'     => hash( 'sha256', (string) $contents ),
+				'audit'      => isset( $audit ) ? $audit : array(),
+				'local'      => true,
+				'updated_at' => gmdate( 'c' ),
+			)
+		);
+
+		$id = $registry->upsert(
+			array(
+				'type'       => $type,
+				'group_key'  => isset( $args['group_key'] ) ? $args['group_key'] : $rules[ $type ]['dir'],
+				'slug'       => $slug,
+				'label'      => isset( $args['label'] ) ? $args['label'] : $slug,
+				'provider'   => isset( $args['provider'] ) ? $args['provider'] : 'local',
+				'version'    => substr( $meta['sha256'], 0, 8 ),
+				'status'     => 'active',
+				'is_default' => ! empty( $args['is_default'] ) ? 1 : 0,
+				'role'       => isset( $args['role'] ) ? $args['role'] : '',
+				'path'       => $storage->relative( $abs ),
+				'url'        => $storage->url( '' ) . $storage->relative( $abs ),
+				'size'       => $size,
+				'meta'       => $meta,
+			)
+		);
+
+		Logger::instance()->info( 'Asset imported', array( 'type' => $type, 'slug' => $slug ) );
+
+		do_action( 'dashwoo_asset_imported', $id, $type, $slug );
+
+		return array(
+			'id'   => $id,
+			'slug' => $slug,
+			'type' => $type,
+			'url'  => $storage->url( '' ) . $storage->relative( $abs ),
+			'meta' => $meta,
+		);
+	}
+
+	/**
+	 * Replace the file of an existing asset (Update button).
+	 *
+	 * @param int    $id       Row id.
+	 * @param string $tmp_path New file.
+	 * @return array<string,mixed>|\WP_Error
+	 */
+	public function replace_file( $id, $tmp_path ) {
+		$row = Registry::instance()->find( $id );
+
+		if ( ! $row ) {
+			return new \WP_Error( 'dashwoo_asset_missing', 'Asset not found.' );
+		}
+
+		$result = $this->import_file(
+			$tmp_path,
+			array(
+				'type'       => $row['type'],
+				'label'      => $row['label'] ? $row['label'] : $row['slug'],
+				'slug'       => $row['slug'],
+				'provider'   => $row['provider'],
+				'role'       => $row['role'],
+				'group_key'  => $row['group_key'],
+				'is_default' => $row['is_default'],
+				'meta'       => $row['meta'],
+			)
+		);
+
+		return $result;
+	}
+
+	/**
+	 * Rename (label) an asset.
+	 *
+	 * @param int    $id    Row id.
+	 * @param string $label New label.
+	 * @return bool
+	 */
+	public function rename( $id, $label ) {
+		return Registry::instance()->update( $id, array( 'label' => sanitize_text_field( $label ) ) );
+	}
+
+	/**
+	 * Enable / disable an asset.
+	 *
+	 * @param int  $id     Row id.
+	 * @param bool $status Active?
+	 * @return bool
+	 */
+	public function set_status( $id, $status ) {
+		return Registry::instance()->update( $id, array( 'status' => $status ? 'active' : 'disabled' ) );
+	}
+
+	/**
+	 * Make an asset the default of its group.
+	 *
+	 * @param int $id Row id.
+	 * @return bool
+	 */
+	public function set_default( $id ) {
+		return Registry::instance()->set_default( $id );
+	}
+
+	/**
+	 * Delete an asset + files.
+	 *
+	 * @param int $id Row id.
+	 * @return bool
+	 */
+	public function delete( $id ) {
+		return Registry::instance()->delete( $id );
+	}
+
+	/**
+	 * Preview payload for the admin list.
+	 *
+	 * @param int $id Row id.
+	 * @return array<string,mixed>|null
+	 */
+	/**
+	 * Delete an asset by type + slug (used by the UI and the REST API).
+	 *
+	 * @param string $slug Asset slug.
+	 * @param string $type Asset type.
+	 * @return bool
+	 */
+	public function delete_by_slug( $slug, $type = 'image' ) {
+		$row = Registry::instance()->find_by_slug( (string) $type, (string) $slug );
+
+		return $row ? $this->delete( (int) $row['id'] ) : false;
+	}
+
+	public function preview( $id ) {
+		$row = Registry::instance()->find( $id );
+
+		if ( ! $row ) {
+			return null;
+		}
+
+		$html = '';
+
+		switch ( $row['type'] ) {
+			case 'font':
+				$html = sprintf(
+					'<span class="dw-font-preview" style="font-family:%s;font-size:22px">%s ۱۲۳ نمونه متن ABC 123</span>',
+					esc_attr( Fonts\Font_Face_Compiler::quote( $row['meta']['family'] ?? $row['label'] ) ),
+					esc_html( 'نمونه' )
+				);
+				break;
+
+			case 'icon':
+				$html = sprintf(
+					'<span class="dw-icon dw-icon--material-symbols dw-icon--%s" style="font-size:32px;font-variation-settings:\'FILL\' 0,\'GRAD\' 0,\'opsz\' 24,\'wght\' 400">%s</span>',
+					esc_attr( (string) ( $row['meta']['style'] ?? 'outlined' ) ),
+					esc_html( 'storefront' )
+				);
+				break;
+
+			case 'svg':
+				$abs  = Storage::instance()->absolute( $row['path'] );
+				$html = $abs ? Svg_Sanitizer::inline( (string) Filesystem::get( $abs ), 'currentColor', 32 ) : '';
+				break;
+
+			case 'image':
+				$html = sprintf( '<img src="%s" alt="%s" style="max-width:120px;height:auto" />', esc_url( $row['url'] ), esc_attr( $row['label'] ) );
+				break;
+
+			default:
+				$html = sprintf( '<code>%s</code>', esc_html( $row['path'] ) );
+		}
+
+		return array(
+			'id'    => (int) $row['id'],
+			'type'  => $row['type'],
+			'label' => $row['label'],
+			'html'  => $html,
+		);
+	}
+
+	/**
+	 * All assets of a type.
+	 *
+	 * @param array<string,mixed> $args Query args.
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function all( array $args = array() ) {
+		return Registry::instance()->query( $args );
+	}
+
+	/**
+	 * Storage stats (used by the dashboard + System Status).
+	 *
+	 * @return array<string,mixed>
+	 */
+	public function stats() {
+		$storage = Storage::instance()->stats();
+		$counts  = array();
+
+		foreach ( Registry::instance()->types() as $type ) {
+			$counts[ $type ] = Registry::instance()->count( array( 'type' => $type ) );
+		}
+
+		$storage['counts'] = $counts;
+
+		return $storage;
+	}
+
+	/**
+	 * Extension => mime map for the registry metadata.
+	 *
+	 * @param string $extension Extension.
+	 * @return string
+	 */
+	public function mime_for( $extension ) {
+		$map = array(
+			'woff2' => 'font/woff2',
+			'woff'  => 'font/woff',
+			'ttf'   => 'font/ttf',
+			'otf'   => 'font/otf',
+			'svg'   => 'image/svg+xml',
+			'png'   => 'image/png',
+			'jpg'   => 'image/jpeg',
+			'jpeg'  => 'image/jpeg',
+			'webp'  => 'image/webp',
+			'avif'  => 'image/avif',
+			'gif'   => 'image/gif',
+			'css'   => 'text/css',
+			'js'    => 'application/javascript',
+			'json'  => 'application/json',
+		);
+
+		return isset( $map[ $extension ] ) ? $map[ $extension ] : 'application/octet-stream';
+	}
+}

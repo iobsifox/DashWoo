@@ -1,0 +1,31 @@
+DashWoo — UI Platform for WooCommerce × Elementor
+Copyright (C) 2026  Obsifox
+
+This program is free software; you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation; either version 2 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+Full license text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
+
+--------------------------------------------------------------------------
+Bundled third-party data
+--------------------------------------------------------------------------
+
+* assets/data/google-fonts.json — a catalogue of Google Fonts family names,
+  weights, subsets and categories, used to build the Google Fonts CSS2 request.
+  The fonts themselves are not bundled: they are downloaded on request from
+  fonts.googleapis.com / fonts.gstatic.com and stored locally in
+  wp-content/uploads/dashwoo/fonts/ under their own licenses (mostly SIL OFL
+  1.1). Each family's license is published by Google Fonts.
+* Material Symbols / Material Icons glyph files are likewise downloaded on
+  request from fonts.googleapis.com / fonts.gstatic.com and stored locally under
+  the Apache License 2.0.
