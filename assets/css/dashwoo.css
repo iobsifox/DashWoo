@@ -1,0 +1,63 @@
+/**
+ * DashWoo platform styles. Consumes the compiled tokens (var(--dw-*)) only:
+ * this file never hard-codes a colour, radius or size.
+ */
+
+.dw-hidden { display: none !important; }
+
+.dw-icon-wrapper { display: flex; align-items: center; gap: var(--dw-space-2, 8px); }
+
+.dw-icon {
+	display: inline-block;
+	line-height: 1;
+	font-variant-ligatures: none;
+	-webkit-font-smoothing: antialiased;
+	transition: color var(--dw-button-transition, 180ms) ease;
+}
+
+/* Buttons -------------------------------------------------------------- */
+.dw-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--dw-space-2, 8px);
+	padding: var(--dw-button-padding-y, 12px) var(--dw-button-padding-x, 20px);
+	border-radius: var(--dw-button-radius, 8px);
+	border: var(--dw-border, 1px solid transparent);
+	font-family: var(--dw-font-button, inherit);
+	font-weight: var(--dw-button-font-weight, 500);
+	transition: background-color var(--dw-button-transition, 180ms) ease;
+	cursor: pointer;
+}
+
+.dw-button--primary { background: var(--dw-color-primary, #2563eb); color: #fff; }
+.dw-button--primary:hover { background: var(--dw-color-primary-hover, #1d4ed8); }
+
+/* Inputs --------------------------------------------------------------- */
+.dw-input {
+	min-height: var(--dw-input-height, 44px);
+	border-radius: var(--dw-input-radius, 8px);
+	border: var(--dw-border, 1px solid #e5e7eb);
+	padding-inline: var(--dw-space-3, 12px);
+	font-family: var(--dw-font-body, inherit);
+}
+
+/* Cards ---------------------------------------------------------------- */
+.dw-card-ui {
+	padding: var(--dw-card-padding, 16px);
+	border-radius: var(--dw-card-radius, 12px);
+	background: var(--dw-color-surface, #f9fafb);
+	box-shadow: var(--dw-shadow-sm, none);
+}
+
+/* Badges --------------------------------------------------------------- */
+.dw-badge-ui {
+	border-radius: var(--dw-badge-radius, 999px);
+	font-size: var(--dw-font-size-sm, 14px);
+	padding: 2px var(--dw-space-2, 8px);
+}
+.dw-badge-ui--discount { background: var(--dw-badge-discount-color, #dc2626); color: #fff; }
+
+/* RTL ------------------------------------------------------------------ */
+.dw-icon--before { margin-inline-end: var(--dw-space-2, 8px); }
+.dw-icon--after { margin-inline-start: var(--dw-space-2, 8px); }
